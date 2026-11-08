@@ -3,11 +3,13 @@
 import Link from 'next/link';
 import { useAuthForm } from '../hooks/useAuthForm.js';
 import Feedback from './Feedback.jsx';
+import PlanningPreview from './PlanningPreview.jsx';
 export default function AuthForm({ mode }) {
   const { submit, busy, error } = useAuthForm(mode);
   const signup = mode === 'register';
   return (
     <main className="auth-page">
+      <PlanningPreview />
       <section className="auth-card">
         <Link href="/" className="brand">
           ◌ planning<span>serein</span>

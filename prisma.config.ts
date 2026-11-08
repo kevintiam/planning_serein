@@ -1,7 +1,7 @@
 /** Prisma CLI charge .env.local comme Next ; migrations sur l'URL directe Neon. */
 import dotenv from 'dotenv';
 import { defineConfig } from 'prisma/config';
-dotenv.config({ path: '.env.local', quiet: true });
+dotenv.config({ path: '.env', quiet: true });
 export default defineConfig({
   schema: 'prisma/schema.prisma',
   migrations: { path: 'prisma/migrations' },

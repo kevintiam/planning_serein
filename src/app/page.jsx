@@ -1,8 +1,10 @@
 /** Entrée publique : la connexion est indépendante de ChatGPT. */
 import Link from 'next/link';
+import PlanningPreview from '../components/PlanningPreview.jsx';
 export default function Home() {
   return (
     <main className="auth-page">
+      <PlanningPreview />
       <section className="auth-card">
         <div className="brand">
           ◌ planning<span>serein</span>
