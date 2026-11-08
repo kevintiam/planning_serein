@@ -1,0 +1,7 @@
+# Secrets et sorties générées restent hors du dépôt et des archives.
+node_modules/
+.next/
+.env*
+!.env.example
+coverage/
+*.log

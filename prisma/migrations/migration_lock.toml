@@ -1,0 +1,2 @@
+# Fournisseur des migrations Prisma ; ne pas changer pour une base existante.
+provider = "postgresql"
