@@ -1,4 +1,4 @@
-/** Route HTTP mince : validation et délégation au service métier. */
+/** /api/tasks (admin) : POST attribue une tâche, DELETE la retire. */
 import { route, requireUser, readBody } from '../../../server/http.js';
 import { planningService } from '../../../server/planning-service.js';
 import { z } from 'zod';

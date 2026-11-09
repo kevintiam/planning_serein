@@ -1,4 +1,4 @@
-/** Route HTTP mince : validation et délégation au service métier. */
+/** POST /api/publish (admin) : publie le planning du mois pour les participants. */
 import { route, requireUser, readBody } from '../../../server/http.js';
 import { planningService } from '../../../server/planning-service.js';
 import { z } from 'zod';

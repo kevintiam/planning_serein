@@ -3,9 +3,17 @@
 import { useEffect, useRef } from 'react';
 import { useTaskForm } from '../hooks/useTaskForm.js';
 import Feedback from './Feedback.jsx';
+import NobodyAvailable from './NobodyAvailable.jsx';
+/**
+ * Fenêtre « Attribuer une tâche ».
+ * @param day date cliquée (AAAA-MM-JJ), modifiable dans le formulaire
+ * @param onClose ferme la fenêtre
+ * @param onSaved appelé après la création de la tâche
+ */
 export default function TaskDialog({ day, onClose, onSaved }) {
   const dialog = useRef(null);
-  const { form, members, loading, busy, error, change, submit } = useTaskForm(day, onSaved);
+  const { form, members, summary, loading, busy, error, change, submit } = useTaskForm(day, onSaved);
+  // showModal() ouvre le <dialog> natif en mode modal : fond assombri et focus gardé dedans.
   useEffect(() => {
     dialog.current.showModal();
   }, []);
@@ -13,6 +21,7 @@ export default function TaskDialog({ day, onClose, onSaved }) {
     <dialog
       ref={dialog}
       aria-labelledby="task-title"
+      /* Touche Échap : on ferme nous-mêmes (sauf pendant un envoi) pour garder React synchronisé. */
       onCancel={(event) => {
         event.preventDefault();
         if (!busy) onClose();
@@ -51,27 +60,35 @@ export default function TaskDialog({ day, onClose, onSaved }) {
             <input type="time" name="end" value={form.end} onChange={change} required />
           </label>
         </div>
-        <label>
-          Personnes disponibles
-          <select
-            name="participantId"
-            value={form.participantId}
-            onChange={change}
-            required
-            disabled={loading}
-          >
-            <option value="">{loading ? 'Recherche…' : 'Choisir une personne'}</option>
-            {members.map((member) => (
-              <option key={member.id} value={member.id}>
-                {member.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <p className="hint">
-          {loading ? 'Vérification des disponibilités…' : `${members.length} personne(s) disponible(s).`} Les
-          personnes indisponibles, déjà occupées ou sans déclaration validée sont masquées.
-        </p>
+        {/* Personne de libre : on explique pourquoi au lieu d'afficher une liste vide. */}
+        {!loading && !members.length && summary ? (
+          <NobodyAvailable summary={summary} day={form.day} />
+        ) : (
+          <>
+            <label>
+              Personnes disponibles
+              <select
+                name="participantId"
+                value={form.participantId}
+                onChange={change}
+                required
+                disabled={loading}
+              >
+                <option value="">{loading ? 'Recherche…' : 'Choisir une personne'}</option>
+                {members.map((member) => (
+                  <option key={member.id} value={member.id}>
+                    {member.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <p className="hint">
+              {loading
+                ? 'Vérification des disponibilités…'
+                : `${members.length} personne${members.length > 1 ? 's' : ''} disponible${members.length > 1 ? 's' : ''} sur ce créneau.`}
+            </p>
+          </>
+        )}
         <button className="primary wide" disabled={busy || loading || !form.participantId}>
           {busy ? 'Enregistrement…' : 'Attribuer la tâche'}
         </button>

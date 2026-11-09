@@ -1,4 +1,4 @@
-/** Page absente : lien de retour vers l'espace de connexion. */
+/** Page 404 : affichée pour toute adresse inconnue, avec un lien de retour à l'accueil. */
 import Link from 'next/link';
 export default function NotFound() {
   return (

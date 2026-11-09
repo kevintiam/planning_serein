@@ -37,7 +37,7 @@ Les requêtes passent par Prisma ; le verrou SQL utilise un template paramétré
 - Inscription publique avec code d'équipe à forte entropie.
 - Le rôle créé par le serveur est toujours `participant`.
 - Les administrateurs sont créés uniquement via le script opérateur.
-- Mot de passe : scrypt, sel aléatoire, comparaison à temps constant.
+- Mot de passe : bcrypt (coût 12, sel inclus), après condensation SHA-256 pour dépasser la limite de 72 octets de bcrypt. Les anciens hachages scrypt restent vérifiables et sont convertis en bcrypt à la connexion suivante.
 - Session : jeton aléatoire de 32 octets, seul son SHA-256 est stocké en base.
 - Cookie HttpOnly, SameSite=Lax, Secure en production, durée 7 jours.
 - Les mutations HTTP exigent un en-tête Origin égal à APP_URL.

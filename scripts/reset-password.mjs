@@ -3,6 +3,7 @@ import { input, password, confirm } from '@inquirer/prompts';
 import { scriptPrisma } from './environment.mjs';
 import { emailSchema, passwordSchema } from '../src/domain/validation.js';
 import { hashPassword } from '../src/server/crypto.js';
+// Usage : npm run password:reset — change le mot de passe d'un compte.
 const db = scriptPrisma();
 try {
   const email = emailSchema.parse(await input({ message: 'Courriel du compte à réinitialiser :' }));
@@ -19,6 +20,7 @@ try {
     const user = await tx.user.findUnique({ where: { email }, select: { id: true } });
     if (!user) throw new Error('Compte introuvable.');
     await tx.user.update({ where: { id: user.id }, data: { password_hash: hash } });
+    // Déconnecte tous les appareils du compte.
     await tx.session.deleteMany({ where: { user_id: user.id } });
   });
   console.log('Mot de passe réinitialisé ; sessions révoquées.');

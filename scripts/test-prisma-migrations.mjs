@@ -3,8 +3,10 @@ import { PGlite } from '@electric-sql/pglite';
 import { PGLiteSocketServer } from '@electric-sql/pglite-socket';
 import { spawn } from 'node:child_process';
 import assert from 'node:assert/strict';
+// PostgreSQL en mémoire (PGlite), exposé sur une socket locale pour Prisma.
 const pg = new PGlite();
 const server = new PGLiteSocketServer({ db: pg, port: 0, host: '127.0.0.1', maxConnections: 5 });
+/** Lance une commande Prisma CLI contre l’URL donnée ; rejette avec la sortie en cas d’échec. */
 async function command(args, url) {
   return new Promise((resolve, reject) => {
     const child = spawn(process.execPath, ['node_modules/prisma/build/index.js', ...args], {
@@ -25,6 +27,7 @@ async function command(args, url) {
 try {
   await server.start();
   const url = `postgresql://postgres:postgres@${server.getServerConn()}/postgres?sslmode=disable`;
+  // Deux déploiements de suite : le second ne doit rien refaire (idempotence).
   await command(['migrate', 'deploy'], url);
   await command(['migrate', 'deploy'], url);
   const applied = await pg.query(

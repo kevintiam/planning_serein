@@ -4,6 +4,10 @@ import Link from 'next/link';
 import { useAuthForm } from '../hooks/useAuthForm.js';
 import Feedback from './Feedback.jsx';
 import PlanningPreview from './PlanningPreview.jsx';
+/**
+ * Formulaire partagé par /connexion et /inscription.
+ * @param mode 'login' (connexion) ou 'register' (inscription)
+ */
 export default function AuthForm({ mode }) {
   const { submit, busy, error } = useAuthForm(mode);
   const signup = mode === 'register';
@@ -12,7 +16,8 @@ export default function AuthForm({ mode }) {
       <PlanningPreview />
       <section className="auth-card">
         <Link href="/" className="brand">
-          ◌ planning<span>serein</span>
+          <i className="brand-mark" aria-hidden="true" />
+          planning<span>serein</span>
         </Link>
         <p className="eyebrow">UN PLANNING POUR TOUS</p>
         <h1>{signup ? 'Rejoignez votre équipe.' : 'Heureux de vous retrouver.'}</h1>
@@ -22,7 +27,9 @@ export default function AuthForm({ mode }) {
             : 'Connectez-vous à votre espace personnel.'}
         </p>
         <Feedback error={error} />
+        {/* Les attributs name des champs deviennent les clés envoyées à l'API. */}
         <form onSubmit={submit}>
+          {/* Champs propres à l'inscription : confirmation du mot de passe et code d'invitation. */}
           {signup && (
             <label>
               Votre nom

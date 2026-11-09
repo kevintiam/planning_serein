@@ -1,0 +1,286 @@
+/* Calendriers, tâches, tableau d'équipe, invitation et dialogue. */
+.calendar-scroll {
+  overflow-x: auto;
+}
+
+.week-grid,
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  min-width: 700px;
+}
+
+.week-grid {
+  border-block: 1px solid var(--line);
+  background: var(--surface-2);
+}
+
+.week-grid span,
+.week-grid button {
+  justify-content: flex-start;
+  padding: 12px 14px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.week-grid button:hover {
+  background: var(--sage);
+  color: var(--forest);
+}
+
+.week-grid > :nth-child(n + 6) {
+  color: var(--faint);
+}
+
+/* Cases du mois */
+.day {
+  position: relative;
+  min-height: 132px;
+  padding: 12px;
+  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  font-size: 13px;
+}
+
+.calendar-grid > :nth-child(7n) {
+  border-right: 0;
+}
+
+.calendar-grid > :nth-child(7n),
+.calendar-grid > :nth-child(7n - 1) {
+  background: #fbf8f2;
+}
+
+.calendar-grid > .blank {
+  background: repeating-linear-gradient(135deg, transparent 0 8px, #efe9de 8px 9px), var(--surface-2);
+}
+
+.day > b,
+.day-title,
+.selectable > strong {
+  font-size: 15px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+/* Aujourd'hui */
+.day.today > b,
+.day.today .day-title > :first-child,
+.selectable.today > strong {
+  display: inline-grid;
+  place-items: center;
+  min-width: 28px;
+  height: 28px;
+  margin: -4px 0 0 -4px;
+  border-radius: 50%;
+  background: var(--forest);
+  color: #fdfbf5;
+}
+
+/* Bouton de jour administrateur */
+.day-title {
+  width: 100%;
+  justify-content: space-between;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.day-title:hover {
+  background: transparent;
+}
+
+/* Le bouton de date couvre toute la case : n'importe quel clic l'active. */
+.day-title::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+}
+
+.day-title:focus-visible {
+  outline: none;
+}
+
+.day-title:focus-visible::after {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+}
+
+.day.clickable {
+  cursor: pointer;
+  transition: background 0.15s var(--ease);
+}
+
+.calendar-grid > .day.clickable:hover {
+  background: #f1f5ec;
+}
+
+/* Les tâches laissent passer le clic vers la case, sauf « Retirer ». */
+.day.clickable .task {
+  position: relative;
+  pointer-events: none;
+}
+
+.day.clickable .task .remove {
+  position: relative;
+  z-index: 1;
+  pointer-events: auto;
+}
+
+/* Déclaration des disponibilités */
+.selectable {
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: space-between;
+  width: 100%;
+  border: 0;
+  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  background: var(--surface);
+  text-align: left;
+}
+
+.selectable > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--sage-ink);
+}
+
+.selectable > span::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #8fb39b;
+}
+
+.selectable:hover {
+  background: var(--sage);
+  border-color: var(--line);
+  box-shadow: inset 0 0 0 2px var(--sage-2);
+}
+
+.calendar-grid > .unavailable,
+.unavailable {
+  background: repeating-linear-gradient(135deg, transparent 0 7px, #efcdb8 7px 8px), var(--clay-soft);
+}
+
+.unavailable > span {
+  color: var(--clay-ink);
+}
+
+.unavailable > span::before {
+  background: var(--clay);
+}
+
+.unavailable:hover {
+  background: repeating-linear-gradient(135deg, transparent 0 7px, #e8bfa6 7px 8px), #f2d6c4;
+  box-shadow: inset 0 0 0 2px #e6b89c;
+}
+
+/* Tâches */
+.task {
+  margin-top: 8px;
+  padding: 8px 10px;
+  border-left: 3px solid var(--forest);
+  border-radius: 4px var(--r-sm) var(--r-sm) 4px;
+  background: var(--sage);
+  overflow-wrap: anywhere;
+  animation: rise 0.35s var(--ease) both;
+}
+
+.task small {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+  color: var(--sage-ink);
+}
+
+.task b,
+.task span {
+  display: block;
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.task b {
+  margin-top: 2px;
+  color: var(--ink);
+}
+
+.task span {
+  color: var(--muted);
+}
+
+.task .remove {
+  margin-top: 6px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.task .remove:hover {
+  color: var(--clay-ink);
+}
+
+.task.conflict {
+  border-color: var(--clay);
+  background: var(--clay-soft);
+}
+
+.task.conflict small {
+  color: var(--clay-ink);
+}
+
+/* Barre de validation */
+.submit-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 20px 24px;
+  background: var(--surface-2);
+}
+
+.submit-bar b {
+  font-size: 15px;
+}
+
+.submit-bar small {
+  margin-top: 2px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Nombre de personnes disponibles dans la case (administrateur) */
+.day-count {
+  padding: 2px 8px;
+  border-radius: 99px;
+  background: var(--sage);
+  color: var(--sage-ink);
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.day-count.zero {
+  background: var(--clay-soft);
+  color: var(--clay-ink);
+}

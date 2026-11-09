@@ -1,0 +1,194 @@
+/* Zone principale : en-tête, titre de page, indicateurs et panneau. */
+/* Zone principale */
+.main-area {
+  margin-left: var(--sidebar);
+  width: calc(100% - var(--sidebar));
+}
+
+header {
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  min-height: 68px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 44px;
+  border-bottom: 1px solid var(--line);
+  background: #f3eee4e0;
+  backdrop-filter: blur(10px);
+  font-size: 13px;
+  color: var(--muted);
+}
+
+header > span:first-child {
+  font-weight: 500;
+}
+
+.content {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 44px 44px 56px;
+}
+
+.content > * {
+  animation: rise 0.6s var(--ease) both;
+}
+
+.content > *:nth-child(2) {
+  animation-delay: 0.06s;
+}
+
+.content > *:nth-child(3) {
+  animation-delay: 0.12s;
+}
+
+.content > *:nth-child(n + 4) {
+  animation-delay: 0.18s;
+}
+
+.page-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 32px;
+}
+
+.page-heading p:last-child {
+  max-width: 560px;
+  margin: 0;
+  font-size: 16px;
+}
+
+/* Indicateurs */
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.stats article {
+  position: relative;
+  padding: 20px 22px 22px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+
+.stats article::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: var(--forest);
+}
+
+.stats article:nth-child(2)::before {
+  background: var(--clay);
+}
+
+.stats article:nth-child(3)::before {
+  background: #c9a24f;
+}
+
+.stats span {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.stats strong {
+  display: block;
+  margin-top: 10px;
+  font-family: var(--display);
+  font-size: 44px;
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  font-variant-numeric: lining-nums tabular-nums;
+}
+
+.stats .status-text {
+  font-size: 34px;
+  font-style: italic;
+  font-weight: 300;
+}
+
+/* Panneau principal */
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+}
+
+.month-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 24px;
+}
+
+.month-nav {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.month-nav h2 {
+  min-width: 190px;
+  margin-right: 12px;
+  text-transform: capitalize;
+}
+
+.month-nav button {
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border-radius: 50%;
+}
+
+.month-nav button svg {
+  width: 18px;
+  height: 18px;
+}
+
+.explanation {
+  margin: 0;
+  padding: 14px 24px;
+  border-top: 1px solid var(--line);
+  background: var(--surface-2);
+  font-size: 14px;
+  color: var(--ink-2);
+}
+
+.explanation strong {
+  color: var(--ink);
+}
+
+.explanation p {
+  margin: 4px 0 0;
+  font-size: 14px;
+}
+
+.panel > .notice {
+  margin: 16px 24px;
+}
+
+.footer-note {
+  margin-top: 28px;
+  text-align: center;
+  font-family: var(--display);
+  font-style: italic;
+  font-size: 15px;
+  color: var(--faint);
+}

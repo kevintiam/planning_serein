@@ -1,8 +1,13 @@
 /** Calendrier de déclaration : dates sélectionnées = journées indisponibles. */
-import { monthDays, monthOffset, WEEKDAYS } from '../domain/calendar.js';
+import { monthDays, monthOffset, todayKey, WEEKDAYS } from '../domain/calendar.js';
 import Feedback from './Feedback.jsx';
+/**
+ * Grille où le participant coche ses jours d'indisponibilité.
+ * @param declaration état et actions renvoyés par useDeclaration
+ */
 export default function AvailabilityCalendar({ month, declaration }) {
   const { days, toggle, toggleWeek, save, busy, confirmed, dirty, error, message } = declaration;
+  const today = todayKey();
   return (
     <>
       <div className="explanation">
@@ -14,11 +19,13 @@ export default function AvailabilityCalendar({ month, declaration }) {
       </div>
       <Feedback error={error} message={message} />
       <div className="calendar-scroll">
+        {/* En-têtes cliquables : un clic coche ou décoche tous les jours de cette colonne. */}
         <div className="week-grid">
           {WEEKDAYS.map((day, index) => (
             <button
               key={day}
               disabled={busy}
+              /* index 0 = lundi ; getDay() utilise 0 = dimanche, d'où le décalage « + 1 » puis « % 7 ». */
               onClick={() => toggleWeek((index + 1) % 7)}
               title={`Sélectionner ou retirer tous les ${day}`}
             >
@@ -27,6 +34,7 @@ export default function AvailabilityCalendar({ month, declaration }) {
           ))}
         </div>
         <div className="calendar-grid">
+          {/* Cases vides avant le 1er du mois. */}
           {Array.from({ length: monthOffset(month) }, (_, index) => (
             <div className="day blank" key={`blank-${index}`} />
           ))}
@@ -37,7 +45,7 @@ export default function AvailabilityCalendar({ month, declaration }) {
               onClick={() => toggle(day)}
               aria-pressed={days.includes(day)}
               aria-label={`${day} : ${days.includes(day) ? 'indisponible' : 'disponible'}`}
-              className={`day selectable ${days.includes(day) ? 'unavailable' : ''}`}
+              className={`day selectable ${days.includes(day) ? 'unavailable' : ''} ${day === today ? 'today' : ''}`}
             >
               <strong>{Number(day.slice(-2))}</strong>
               <span>{days.includes(day) ? 'Indisponible' : 'Disponible'}</span>
@@ -45,6 +53,7 @@ export default function AvailabilityCalendar({ month, declaration }) {
           ))}
         </div>
       </div>
+      {/* Bilan et actions : brouillon ou validation définitive du mois. */}
       <div className="submit-bar">
         <div>
           <b>{confirmed ? 'Déclaration validée' : dirty ? 'Modifications non enregistrées' : 'À valider'}</b>

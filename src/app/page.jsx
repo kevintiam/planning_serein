@@ -1,4 +1,4 @@
-/** Entrée publique : la connexion est indépendante de ChatGPT. */
+/** Page d'accueil publique : présentation de l'app et accès à la connexion ou à l'inscription. */
 import Link from 'next/link';
 import PlanningPreview from '../components/PlanningPreview.jsx';
 export default function Home() {
@@ -7,7 +7,8 @@ export default function Home() {
       <PlanningPreview />
       <section className="auth-card">
         <div className="brand">
-          ◌ planning<span>serein</span>
+          <i className="brand-mark" aria-hidden="true" />
+          planning<span>serein</span>
         </div>
         <p className="eyebrow">VOTRE ÉQUIPE, SIMPLEMENT</p>
         <h1>Un mois bien organisé.</h1>

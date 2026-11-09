@@ -1,0 +1,224 @@
+/* Adaptations tablette et mobile, puis respect des préférences de mouvement. */
+@media (max-width: 1100px) {
+  .workspace {
+    --sidebar: 232px;
+  }
+  .content {
+    padding: 32px 26px 48px;
+  }
+  header {
+    padding-inline: 26px;
+  }
+  .auth-page {
+    gap: 48px;
+    padding: 44px 32px;
+  }
+  .auth-card {
+    padding: 32px;
+  }
+  .page-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 860px) {
+  .auth-page {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 32px;
+    padding: 32px 16px 48px;
+  }
+  .welcome-story {
+    width: min(100%, 452px);
+  }
+  .welcome-story h2 {
+    margin-top: 20px;
+    font-size: 40px;
+  }
+  .welcome-story > p {
+    font-size: 16px;
+  }
+  .preview-card,
+  .story-footnote {
+    display: none;
+  }
+}
+
+@media (max-width: 760px) {
+  .workspace {
+    display: block;
+  }
+  .sidebar {
+    position: relative;
+    width: 100%;
+    padding: 16px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 14px;
+  }
+  .sidebar .brand {
+    padding: 0;
+    font-size: 22px;
+  }
+  .team-title,
+  .nav-label,
+  .sidebar-note {
+    display: none;
+  }
+  .sidebar nav {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    display: flex;
+    gap: 4px;
+    padding: 4px;
+    border-radius: var(--r-md);
+    background: #ffffff0d;
+  }
+  .sidebar nav button {
+    flex: 1;
+    justify-content: center;
+    padding: 10px 8px;
+    font-size: 13px;
+  }
+  .profile {
+    grid-row: 1;
+    grid-column: 2;
+    display: flex;
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+  .profile b,
+  .profile small {
+    display: none;
+  }
+  .profile .avatar {
+    width: 34px;
+    height: 34px;
+    font-size: 13px;
+  }
+  .profile button {
+    margin: 0;
+    padding: 7px 11px;
+    font-size: 12px;
+  }
+  .main-area {
+    margin-left: 0;
+    width: 100%;
+  }
+  header {
+    position: static;
+    min-height: 52px;
+    padding: 12px 16px;
+    font-size: 12px;
+  }
+  .content {
+    padding: 24px 16px 40px;
+  }
+  .page-heading {
+    margin-bottom: 22px;
+  }
+  .page-heading p:last-child {
+    font-size: 15px;
+  }
+  .page-heading > .primary {
+    width: 100%;
+  }
+  h1 {
+    font-size: 34px;
+  }
+  .stats {
+    gap: 8px;
+  }
+  .stats article {
+    padding: 14px 12px 16px 14px;
+  }
+  .stats span {
+    font-size: 10px;
+    letter-spacing: 0.06em;
+  }
+  .stats strong {
+    font-size: 32px;
+  }
+  .stats .status-text {
+    font-size: 22px;
+  }
+  .month-bar {
+    flex-wrap: wrap;
+    padding: 16px;
+  }
+  .month-nav {
+    width: 100%;
+  }
+  .month-nav h2 {
+    flex: 1;
+    min-width: 0;
+    font-size: 22px;
+  }
+  .actions:empty {
+    display: none;
+  }
+  /* La déclaration tient dans l'écran : pastille seule, libellé gardé par aria-label. */
+  .calendar-scroll:has(.selectable) :is(.week-grid, .calendar-grid) {
+    min-width: 0;
+  }
+  .calendar-scroll:has(.selectable) .week-grid button {
+    padding: 10px 4px;
+    justify-content: center;
+    font-size: 11px;
+    letter-spacing: 0.02em;
+  }
+  .calendar-scroll:has(.selectable) .day {
+    min-height: 64px;
+    padding: 8px;
+  }
+  .selectable > span {
+    font-size: 0;
+  }
+  .selectable > span::before {
+    width: 8px;
+    height: 8px;
+  }
+  .explanation,
+  .submit-bar {
+    padding: 14px 16px;
+  }
+  .submit-bar {
+    flex-wrap: wrap;
+  }
+  .actions {
+    width: 100%;
+  }
+  .actions button {
+    flex: 1;
+  }
+  .panel > .notice {
+    margin: 12px 16px;
+  }
+  th,
+  td {
+    padding: 14px 16px;
+  }
+  .auth-card {
+    padding: 28px 22px;
+  }
+  .auth-card h1 {
+    font-size: 32px;
+  }
+  dialog {
+    padding: 28px 22px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}

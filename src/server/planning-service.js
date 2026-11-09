@@ -13,11 +13,18 @@ import {
   taskConflict,
   participantFacts,
 } from './planning-queries.js';
+/** Garde : seul l'administrateur peut appeler la méthode. */
 function admin(user) {
   if (user.role !== 'admin') throw new AppError('Accès administrateur requis.', 403);
 }
+/** Fabrique du service planning ; `db` est injectable pour les tests. */
 export function createPlanningService(db = prisma) {
   return {
+    /**
+     * Données d'un mois pour l'écran principal.
+     * L'admin voit toute l'équipe ; un participant ne voit que ses propres données,
+     * et ses tâches uniquement une fois le planning publié.
+     */
     async overview(user, month) {
       const team_id = user.team_id;
       const isAdmin = user.role === 'admin';
@@ -30,6 +37,7 @@ export function createPlanningService(db = prisma) {
             orderBy: { name: 'asc' },
           })
         : [];
+      // Filtre supplémentaire : un participant ne lit que ses propres lignes.
       const owned = isAdmin ? {} : { user_id: user.id };
       const declarations = await db.declaration.findMany({
         where: { team_id, month, ...owned },
@@ -66,10 +74,16 @@ export function createPlanningService(db = prisma) {
         })),
       };
     },
+    /**
+     * Enregistre les jours d'absence d'un participant pour un mois.
+     * confirm = true valide la déclaration ; false la garde en brouillon.
+     */
     async saveDeclaration(user, input) {
       if (user.role !== 'participant') throw new AppError('Déclaration réservée aux participants.', 403);
       return db.$transaction(async (tx) => {
+        // Verrou : empêche deux modifications simultanées du même mois de l'équipe.
         await lockMonth(tx, user.team_id, input.month);
+        // On remplace entièrement les absences du mois par la nouvelle sélection.
         await tx.absence.deleteMany({ where: { user_id: user.id, day: monthRange(input.month) } });
         const days = [...new Set(input.days)];
         if (days.length)
@@ -90,6 +104,7 @@ export function createPlanningService(db = prisma) {
         return { saved: true };
       });
     },
+    /** Liste des participants libres pour un créneau (nom et identifiant). */
     async available(user, input, executor = db) {
       admin(user);
       return executor.user.findMany({
@@ -98,6 +113,24 @@ export function createPlanningService(db = prisma) {
         orderBy: { name: 'asc' },
       });
     },
+    /** Explique une liste vide : combien de participants sont écartés, et pour quelle raison. */
+    async availabilitySummary(user, input, executor = db) {
+      admin(user);
+      const month = input.day.slice(0, 7);
+      const team = { team_id: user.team_id, role: 'participant' };
+      const validated = { ...team, declarations: { some: { month, confirmed_at: { not: null } } } };
+      const [total, confirmed, absent, available] = await Promise.all([
+        executor.user.count({ where: team }),
+        executor.user.count({ where: validated }),
+        executor.user.count({ where: { ...validated, absences: { some: { day: asDate(input.day) } } } }),
+        executor.user.count({ where: availableWhere(user, input) }),
+      ]);
+      return { total, notValidated: total - confirmed, absent, busy: confirmed - absent - available };
+    },
+    /**
+     * Attribue une tâche. La disponibilité est revérifiée sous verrou :
+     * l'état a pu changer depuis l'ouverture de la fenêtre.
+     */
     async createTask(user, input) {
       admin(user);
       return db.$transaction(async (tx) => {
@@ -123,6 +156,7 @@ export function createPlanningService(db = prisma) {
         return task;
       });
     },
+    /** Retire une tâche de l'équipe et repasse le mois en brouillon. */
     async deleteTask(user, id) {
       admin(user);
       return db.$transaction(async (tx) => {
@@ -135,6 +169,10 @@ export function createPlanningService(db = prisma) {
         return { deleted: true };
       });
     },
+    /**
+     * Publie le mois : les participants voient alors leurs tâches.
+     * Refusé tant qu'une tâche est en conflit.
+     */
     async publish(user, month) {
       admin(user);
       return db.$transaction(async (tx) => {
@@ -154,6 +192,10 @@ export function createPlanningService(db = prisma) {
         return { published: true };
       });
     },
+    /**
+     * Génère un nouveau code d'invitation et invalide l'ancien.
+     * Seule l'empreinte est stockée : le code en clair n'est renvoyé qu'une fois.
+     */
     async rotateInvitation(user) {
       admin(user);
       const invitation = randomToken();
@@ -162,4 +204,5 @@ export function createPlanningService(db = prisma) {
     },
   };
 }
+/** Instance unique utilisée par les routes API. */
 export const planningService = createPlanningService();

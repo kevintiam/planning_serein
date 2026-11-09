@@ -1,4 +1,9 @@
 /** Vue administrative des membres et de leur déclaration mensuelle. */
+import { initials } from '../domain/format.js';
+/**
+ * Tableau de l'équipe pour le mois affiché.
+ * @param data réponse de /api/planning (members, declarations, absences)
+ */
 export default function TeamTable({ data }) {
   return (
     <div className="table-scroll">
@@ -12,15 +17,24 @@ export default function TeamTable({ data }) {
         </thead>
         <tbody>
           {data.members.map((member) => {
+            // Déclaration de ce membre pour le mois (undefined s’il n’a rien envoyé).
             const declaration = data.declarations.find((row) => row.user_id === member.id);
+            // Ses jours d'absence, réduits au numéro du jour (ex. 3, 4, 17).
             const days = data.absences
               .filter((row) => row.user_id === member.id)
               .map((row) => Number(row.day.slice(-2)));
             return (
               <tr key={member.id}>
                 <td>
-                  <b>{member.name}</b>
-                  <small>{member.email}</small>
+                  <div className="member">
+                    <i className="avatar" aria-hidden="true">
+                      {initials(member.name)}
+                    </i>
+                    <div>
+                      <b>{member.name}</b>
+                      <small>{member.email}</small>
+                    </div>
+                  </div>
                 </td>
                 <td>
                   <span className={`badge ${declaration?.confirmed_at ? 'green' : 'amber'}`}>
@@ -39,6 +53,7 @@ export default function TeamTable({ data }) {
           })}
         </tbody>
       </table>
+      {/* Équipe vide : invitation à générer un premier code. */}
       {!data.members.length && (
         <div className="empty">
           <h3>Invitez votre premier participant</h3>

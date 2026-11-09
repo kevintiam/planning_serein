@@ -26,8 +26,8 @@ L'ancienne table `schema_migrations`, utilisée par le premier script, peut rest
 présente ; elle n'est plus utilisée par l'application Prisma.
 
 Les noms de tables, colonnes, clés et contraintes métier ont été conservés.
-Les condensats de mots de passe scrypt restent compatibles ; aucun compte n'est
-recréé automatiquement. Ne relancez pas `admin:create` pour un admin existant.
+Les condensats de mots de passe scrypt restent compatibles : ils sont convertis
+en bcrypt à la prochaine connexion réussie. Aucun compte n'est recréé automatiquement. Ne relancez pas `admin:create` pour un admin existant.
 
 ## Si vous avez modifié le schéma
 

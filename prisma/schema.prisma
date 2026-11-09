@@ -9,93 +9,112 @@ datasource db {
 }
 
 // Les noms des tables/colonnes existantes sont conservés pour la reprise des données.
+// Équipe : un administrateur et ses participants. invite_hash = empreinte SHA-256 du code d'invitation.
 model Team {
-  id          String   @id @default(uuid()) @db.Uuid
-  name        String   @db.VarChar(100)
-  invite_hash String   @unique @db.Char(64)
-  created_at  DateTime @default(now()) @db.Timestamptz
+  id          String     @id @default(uuid()) @db.Uuid
+  name        String     @db.VarChar(100)
+  invite_hash String     @unique @db.Char(64)
+  created_at  DateTime   @default(now()) @db.Timestamptz
   users       User[]
   tasks       Task[]
   schedules   Schedule[]
+
   @@map("teams")
 }
 
+// Utilisateur. role vaut 'admin' ou 'participant' ; password_hash au format bcrypt « $2b$12$… »
+// (ou « scrypt$sel$clé » pour un ancien compte, converti à sa prochaine connexion).
 model User {
-  id            String   @id @default(uuid()) @db.Uuid
-  team_id       String   @db.Uuid
-  name          String   @db.VarChar(100)
-  email         String   @unique @db.VarChar(254)
+  id            String        @id @default(uuid()) @db.Uuid
+  team_id       String        @db.Uuid
+  name          String        @db.VarChar(100)
+  email         String        @unique @db.VarChar(254)
   password_hash String
   // La contrainte SQL role IN ('admin','participant') reste dans la migration.
-  role          String   @db.VarChar(20)
-  created_at    DateTime @default(now()) @db.Timestamptz
-  team          Team     @relation(fields: [team_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  role          String        @db.VarChar(20)
+  created_at    DateTime      @default(now()) @db.Timestamptz
+  team          Team          @relation(fields: [team_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   sessions      Session[]
   declarations  Declaration[]
   absences      Absence[]
   tasks         Task[]
+
+  // Permet aux autres tables de référencer (id, team_id) : une ligne ne peut pas
+  // pointer vers un utilisateur d'une autre équipe.
   @@unique([id, team_id])
   @@map("users")
 }
 
+// Session de connexion : on stocke l’empreinte du jeton, jamais le jeton lui-même.
 model Session {
   token_hash String   @id @db.Char(64)
   user_id    String   @db.Uuid
   expires_at DateTime @db.Timestamptz
   user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
   @@index([user_id], map: "sessions_user_idx")
   @@index([expires_at], map: "sessions_expiry_idx")
   @@map("sessions")
 }
 
+// Déclaration mensuelle d'un participant. confirmed_at vide = brouillon ; rempli = validée.
 model Declaration {
-  user_id      String   @db.Uuid
-  team_id      String   @db.Uuid
-  month        String   @db.Char(7)
+  user_id      String    @db.Uuid
+  team_id      String    @db.Uuid
+  month        String    @db.Char(7)
   confirmed_at DateTime? @db.Timestamptz
-  updated_at   DateTime @default(now()) @db.Timestamptz
-  user         User     @relation(fields: [user_id, team_id], references: [id, team_id], onDelete: Cascade, onUpdate: NoAction)
+  updated_at   DateTime  @default(now()) @db.Timestamptz
+  user         User      @relation(fields: [user_id, team_id], references: [id, team_id], onDelete: Cascade, onUpdate: NoAction)
+
   @@id([user_id, month])
   @@map("declarations")
 }
 
+// Un jour où le participant est indisponible.
 model Absence {
-  user_id String @db.Uuid
-  team_id String @db.Uuid
+  user_id String   @db.Uuid
+  team_id String   @db.Uuid
   day     DateTime @db.Date
-  user    User @relation(fields: [user_id, team_id], references: [id, team_id], onDelete: Cascade, onUpdate: NoAction)
+  user    User     @relation(fields: [user_id, team_id], references: [id, team_id], onDelete: Cascade, onUpdate: NoAction)
+
   @@id([user_id, day])
   @@index([team_id, day], map: "absences_team_day_idx")
   @@map("absences")
 }
 
+// Tâche attribuée à un participant, un jour donné, sur un horaire.
 model Task {
-  id             String @id @default(uuid()) @db.Uuid
-  team_id        String @db.Uuid
-  participant_id String @db.Uuid
+  id             String   @id @default(uuid()) @db.Uuid
+  team_id        String   @db.Uuid
+  participant_id String   @db.Uuid
   day            DateTime @db.Date
   start_time     DateTime @db.Time(6)
   end_time       DateTime @db.Time(6)
-  title          String @db.VarChar(100)
+  title          String   @db.VarChar(100)
   created_at     DateTime @default(now()) @db.Timestamptz
-  team           Team @relation(fields: [team_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  participant    User @relation(fields: [participant_id, team_id], references: [id, team_id], onDelete: NoAction, onUpdate: NoAction)
+  team           Team     @relation(fields: [team_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  participant    User     @relation(fields: [participant_id, team_id], references: [id, team_id], onDelete: NoAction, onUpdate: NoAction)
+
   @@index([team_id, day], map: "tasks_team_day_idx")
   @@map("tasks")
 }
 
+// État du planning d'un mois : published_at rempli = visible par les participants.
 model Schedule {
-  team_id      String @db.Uuid
-  month        String @db.Char(7)
+  team_id      String    @db.Uuid
+  month        String    @db.Char(7)
   published_at DateTime? @db.Timestamptz
-  team         Team @relation(fields: [team_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  team         Team      @relation(fields: [team_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
   @@id([team_id, month])
   @@map("schedules")
 }
 
+// Compteur anti force brute ; key = empreinte de « action:identifiant ».
 model RateLimit {
-  key      String @id @db.Char(64)
+  key      String   @id @db.Char(64)
   attempts Int
   reset_at DateTime @db.Timestamptz
+
   @@map("rate_limits")
 }

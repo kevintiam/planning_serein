@@ -1,5 +1,5 @@
 'use client';
-/** Repli lisible si une page serveur échoue, sans exposer les détails techniques. */
+/** Page d'erreur générique de Next.js : message lisible, sans détail technique, et bouton pour réessayer. */
 export default function ErrorPage({ reset }) {
   return (
     <main className="auth-page">

@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { scriptPrisma } from './environment.mjs';
 import { hashPassword, randomToken, digest } from '../src/server/crypto.js';
 import { emailSchema, passwordSchema } from '../src/domain/validation.js';
+// Usage : npm run admin:create — crée une équipe, son administrateur et le premier code d'invitation.
 const db = scriptPrisma();
 try {
   const name = z
@@ -24,6 +25,7 @@ try {
   );
   const repeated = await password({ message: 'Confirmez le mot de passe :', mask: '*' });
   if (secret !== repeated) throw new Error('Les mots de passe ne correspondent pas.');
+  // Équipe et admin sont créés dans la même transaction : tout ou rien.
   const passwordHash = await hashPassword(secret);
   const invitation = randomToken();
   await db.$transaction(async (tx) => {
@@ -32,6 +34,7 @@ try {
       data: { team_id: team.id, name, email, password_hash: passwordHash, role: 'admin' },
     });
   });
+  // Le code n'est affiché qu'ici : seule son empreinte est enregistrée.
   console.log('Équipe et administrateur créés. Code d’invitation à conserver :');
   console.log(invitation);
 } catch (error) {

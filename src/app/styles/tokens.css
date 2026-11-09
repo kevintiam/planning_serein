@@ -1,0 +1,177 @@
+/* Fondations du design « agenda papier » : couleurs, typographie et composants de base.
+   Modifier les variables de :root suffit pour décliner le thème. */
+:root {
+  /* Surfaces */
+  --paper: #f3eee4;
+  --surface: #fffdf8;
+  --surface-2: #f8f4ec;
+  --line: #e3dbcd;
+  --line-strong: #cfc3b0;
+  /* Encre */
+  --ink: #14302a;
+  --ink-2: #344d46;
+  --muted: #5d6f68;
+  --faint: #8a968f;
+  /* Accents */
+  --forest: #1e5443;
+  --forest-deep: #12352b;
+  --forest-night: #0d2922;
+  --sage: #e2eadc;
+  --sage-2: #cfdcc6;
+  --sage-ink: #2c5a46;
+  --clay: #c0643c;
+  --clay-soft: #f6e1d3;
+  --clay-ink: #8a3f20;
+  --gold-soft: #f2e5c8;
+  --gold-ink: #74561b;
+  --focus: #3c7bbf;
+  /* Typographie */
+  --display: 'Fraunces', 'Iowan Old Style', Georgia, serif;
+  --body: 'Hanken Grotesk', 'Avenir Next', 'Segoe UI', sans-serif;
+  /* Formes */
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 18px;
+  --shadow-sm: 0 1px 2px #3b2d1a0d;
+  --shadow-md: 0 1px 2px #3b2d1a0a, 0 8px 24px -8px #3b2d1a1f;
+  --shadow-lg: 0 2px 4px #3b2d1a0a, 0 24px 60px -16px #2a20123d;
+  --ease: cubic-bezier(0.22, 0.8, 0.3, 1);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font: 400 15px/1.55 var(--body);
+  color: var(--ink);
+  background: var(--paper);
+  -webkit-font-smoothing: antialiased;
+  font-feature-settings: 'ss01', 'cv11';
+}
+
+/* Grain de papier très léger, purement décoratif. */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.5;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .35 0 0 0 0 .3 0 0 0 0 .22 0 0 0 .09 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+body > * {
+  position: relative;
+  z-index: 1;
+}
+
+::selection {
+  background: var(--sage-2);
+  color: var(--forest-night);
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--display);
+  font-weight: 400;
+  font-variation-settings:
+    'SOFT' 50,
+    'opsz' 96;
+  color: var(--ink);
+  margin: 0;
+}
+
+h1 {
+  font-size: clamp(34px, 3.4vw, 48px);
+  line-height: 1.08;
+  letter-spacing: -0.025em;
+  margin: 10px 0 12px;
+}
+
+h2 {
+  font-size: 26px;
+  line-height: 1.2;
+  letter-spacing: -0.015em;
+}
+
+h3 {
+  font-size: 22px;
+}
+
+p {
+  color: var(--muted);
+  line-height: 1.65;
+}
+
+small {
+  display: block;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--clay);
+}
+
+/* Marque */
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--display);
+  font-size: 24px;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+  color: var(--ink);
+}
+
+.brand span {
+  font-style: italic;
+  font-weight: 300;
+  color: var(--clay);
+}
+
+.brand-mark {
+  position: relative;
+  width: 26px;
+  height: 26px;
+  flex: none;
+  border-radius: 50%;
+  border: 1.5px solid currentColor;
+}
+
+.brand-mark::after {
+  content: '';
+  position: absolute;
+  inset: 5px 5px auto auto;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--clay);
+}

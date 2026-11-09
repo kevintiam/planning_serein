@@ -5,12 +5,22 @@ import Feedback from './Feedback.jsx';
 import MonthBar from './MonthBar.jsx';
 import AvailabilityCalendar from './AvailabilityCalendar.jsx';
 import PlanningCalendar from './PlanningCalendar.jsx';
+import { dailyAvailability } from '../domain/calendar.js';
 import TeamTable from './TeamTable.jsx';
 import TaskDialog from './TaskDialog.jsx';
+import Sidebar from './Sidebar.jsx';
+import ConfirmDialog from './ConfirmDialog.jsx';
+
+/**
+ * Espace connecté (admin ou participant) : barre latérale, en-tête, indicateurs,
+ * calendrier ou tableau selon l'onglet, et fenêtres (tâche, code d'invitation).
+ * @param user utilisateur fourni par la page serveur (vérifié côté serveur)
+ */
 export default function Workspace({ user }) {
   const model = useWorkspace(user);
   const { data, month, tab, setTab, busy, loading } = model;
   const admin = user.role === 'admin';
+  // Onglets [identifiant, libellé] selon le rôle.
   const tabs = admin
     ? [
         ['planning', 'Planning mensuel'],
@@ -20,42 +30,25 @@ export default function Workspace({ user }) {
         ['disponibilites', 'Mes disponibilités'],
         ['planning', 'Mes tâches'],
       ];
+  // true si au moins une tâche est en conflit (la publication est alors bloquée).
   const conflicts = data?.tasks.some((task) => task.conflict);
+  // Nombre de personnes disponibles par jour, affiché dans chaque case (admin seulement).
+  const availability =
+    admin && data ? dailyAvailability(month, data.members, data.declarations, data.absences) : {};
+
   return (
     <div className="workspace">
-      <aside className="sidebar">
-        <a href="/espace" className="brand">
-          ◌ planning<span>serein</span>
-        </a>
-        <div className="team-title">
-          {user.team_name}
-          <small>{admin ? 'Espace administrateur' : 'Espace participant'}</small>
-        </div>
-        <p className="nav-label">ORGANISATION</p>
-        <nav>
-          {tabs.map(([value, label]) => (
-            <button key={value} className={tab === value ? 'active' : ''} onClick={() => setTab(value)}>
-              {label}
-            </button>
-          ))}
-        </nav>
-        <div className="sidebar-note">
-          <b>
-            Moins d’organisation.
-            <br />
-            Plus de sérénité.
-          </b>
-          <p>Les disponibilités de chacun, un planning pour tous.</p>
-        </div>
-        <div className="profile">
-          <b>{user.name}</b>
-          <small>{user.email}</small>
-          <button onClick={model.signOut} disabled={busy || model.declaration.busy}>
-            Se déconnecter
-          </button>
-        </div>
-      </aside>
+      <Sidebar
+        user={user}
+        admin={admin}
+        tabs={tabs}
+        tab={tab}
+        onTab={setTab}
+        onSignOut={model.signOut}
+        signOutDisabled={busy || model.declaration.busy}
+      />
       <main className="main-area">
+        {/* Fil d'Ariane : équipe / onglet actif, et badge du rôle. */}
         <header>
           <span>
             {user.team_name} / {tabs.find(([key]) => key === tab)?.[1]}
@@ -63,6 +56,7 @@ export default function Workspace({ user }) {
           <span className="badge green">{admin ? 'Administrateur' : 'Participant'}</span>
         </header>
         <div className="content">
+          {/* Titre de la page, adapté à l’onglet. */}
           <div className="page-heading">
             <div>
               <p className="eyebrow">L’ÉQUIPE, EN HARMONIE</p>
@@ -80,12 +74,13 @@ export default function Workspace({ user }) {
               </p>
             </div>
             {admin && tab === 'equipe' && (
-              <button className="primary" onClick={model.invite} disabled={busy}>
+              <button className="primary" onClick={model.askInvite} disabled={busy}>
                 Générer un code d’invitation
               </button>
             )}
           </div>
           <Feedback error={model.error} message={model.message} />
+          {/* Nouveau code : affiché une seule fois, sélectionné au focus pour faciliter la copie. */}
           {model.invitation && (
             <div className="invitation">
               <b>Code d’invitation — à copier maintenant</b>
@@ -101,6 +96,7 @@ export default function Workspace({ user }) {
               </small>
             </div>
           )}
+          {/* Trois indicateurs du mois, différents pour l’admin et le participant. */}
           {data && (
             <div className="stats">
               <article>
@@ -119,19 +115,21 @@ export default function Workspace({ user }) {
               </article>
             </div>
           )}
+          {/* Panneau principal : navigation entre les mois, puis contenu de l’onglet. */}
           <section className="panel">
             <MonthBar
               month={month}
               onMove={model.changeMonth}
               disabled={busy || model.declaration.busy || loading}
             >
+              {/* Publication impossible sans tâche, déjà publiée, ou avec des conflits. */}
               {admin && tab === 'planning' && (
                 <button
                   className="primary"
                   onClick={model.publish}
                   disabled={busy || loading || !data?.tasks.length || data?.published || conflicts}
                 >
-                  Publier le mois
+                  Publier le planning du mois
                 </button>
               )}
             </MonthBar>
@@ -166,6 +164,7 @@ export default function Workspace({ user }) {
                   month={month}
                   tasks={data.tasks}
                   admin={admin}
+                  availability={availability}
                   onDay={model.setTaskDay}
                   onRemove={model.removeTask}
                   busy={busy}
@@ -176,6 +175,23 @@ export default function Workspace({ user }) {
           <p className="footer-note">Un planning simple, pour avancer ensemble.</p>
         </div>
       </main>
+      {/* Fenêtre de confirmation avant de remplacer le code d'invitation. */}
+      {model.inviteAsked && (
+        <ConfirmDialog
+          title="Générer un nouveau code ?"
+          confirmLabel="Générer le code"
+          onConfirm={model.confirmInvite}
+          onCancel={model.cancelInvite}
+          busy={busy}
+        >
+          <p>Un nouveau code sera créé pour votre équipe.</p>
+          <p>
+            <b>L’ancien code ne fonctionnera plus</b> pour les nouvelles inscriptions. Les membres déjà
+            inscrits gardent leur compte.
+          </p>
+        </ConfirmDialog>
+      )}
+      {/* Fenêtre « Attribuer une tâche », ouverte en cliquant sur une case du calendrier. */}
       {model.taskDay && (
         <TaskDialog day={model.taskDay} onClose={() => model.setTaskDay('')} onSaved={model.taskSaved} />
       )}

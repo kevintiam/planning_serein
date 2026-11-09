@@ -1,5 +1,5 @@
-/** Route HTTP mince : validation et délégation au service métier. */
-import { route, requireUser, readBody } from '../../../server/http.js';
+/** GET /api/planning?month=AAAA-MM : données du mois (filtrées selon le rôle par le service). */
+import { route, requireUser } from '../../../server/http.js';
 import { planningService } from '../../../server/planning-service.js';
 import { monthSchema } from '../../../domain/validation.js';
 export const GET = route(async (request) => {
