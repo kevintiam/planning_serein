@@ -12,7 +12,8 @@ export const runtime = 'nodejs';
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma.js';
 import { requireUser } from '@/lib/auth.js';
-import { isValidDate, isValidTime, isValidUuid, isValidText, cleanText } from '@/lib/validation.js';
+import { isValidDate, isValidTime, isValidUuid, cleanText } from '@/lib/validation.js';
+import { ACTIVITIES } from '@/domain/activities.js';
 import { asDate, asTime, dayText, availableWhere, markDraft, lockMonth } from '@/lib/planning.js';
 
 /**
@@ -38,8 +39,9 @@ export async function POST(request) {
     if (body.end <= body.start) {
       return NextResponse.json({ error: 'La fin doit suivre le début, le même jour.' }, { status: 400 });
     }
-    if (!isValidText(title, 2, 100)) {
-      return NextResponse.json({ error: 'Le titre doit contenir de 2 à 100 caractères.' }, { status: 400 });
+    // L'activité doit faire partie de la liste fixe (même liste que la liste déroulante).
+    if (!ACTIVITIES.includes(title)) {
+      return NextResponse.json({ error: 'Choisissez une activité de la liste.' }, { status: 400 });
     }
 
     const month = body.day.slice(0, 7);

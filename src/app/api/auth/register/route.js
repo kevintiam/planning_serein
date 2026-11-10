@@ -33,7 +33,7 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Le nom doit contenir de 2 à 100 caractères.' }, { status: 400 });
     }
     if (!isValidEmail(email)) {
-      return NextResponse.json({ error: 'Utilisez votre courriel @lacitec.on.ca.' }, { status: 400 });
+      return NextResponse.json({ error: 'Adresse courriel invalide.' }, { status: 400 });
     }
     if (!isValidPassword(password)) {
       return NextResponse.json({ error: 'Utilisez au moins 12 caractères.' }, { status: 400 });

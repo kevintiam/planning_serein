@@ -4,11 +4,9 @@
  * Chaque fonction renvoie true si la valeur est valide, false sinon.
  */
 
-/** Courriel valide du domaine @lacitec.on.ca (à passer déjà en minuscules et sans espaces). */
+/** Courriel au format valide, 254 caractères max (à passer déjà en minuscules et sans espaces). */
 export const isValidEmail = (email) =>
-  typeof email === 'string' &&
-  email.length <= 254 &&
-  /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+  typeof email === 'string' && email.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
 /** Mot de passe de 12 à 128 caractères. */
 export const isValidPassword = (password) =>

@@ -22,7 +22,8 @@ test('Validateurs : dates inexistantes, mois, heures, courriels et UUID', () => 
   assert.equal(isValidTime('24:00'), false);
   assert.equal(isValidTime('19:30'), true);
   assert.equal(isValidEmail('kevin@lacitec.on.ca'), true);
-  assert.equal(isValidEmail('kevin@gmail.com'), false);
+  assert.equal(isValidEmail('kevin@gmail.com'), true);
+  assert.equal(isValidEmail('pas-un-courriel'), false);
   assert.equal(isValidUuid(crypto.randomUUID()), true);
   assert.equal(isValidUuid('pas-un-uuid'), false);
 });

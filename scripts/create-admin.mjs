@@ -8,8 +8,8 @@ const db = scriptPrisma();
 try {
   const name = (await input({ message: 'Votre nom :' })).trim();
   if (!isValidText(name, 2, 100)) throw new Error('Le nom doit contenir de 2 à 100 caractères.');
-  const email = (await input({ message: 'Courriel administrateur (@lacitec.on.ca) :' })).trim().toLowerCase();
-  if (!isValidEmail(email)) throw new Error('Utilisez un courriel @lacitec.on.ca.');
+  const email = (await input({ message: 'Courriel administrateur :' })).trim().toLowerCase();
+  if (!isValidEmail(email)) throw new Error('Adresse courriel invalide.');
   const teamName = (await input({ message: 'Nom de l’équipe :' })).trim();
   if (!isValidText(teamName, 2, 100)) throw new Error('Le nom d’équipe doit contenir de 2 à 100 caractères.');
   const secret = await password({ message: 'Mot de passe (12 caractères minimum) :', mask: '*' });

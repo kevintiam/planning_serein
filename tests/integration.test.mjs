@@ -84,7 +84,7 @@ test('Inscription, connexion, rôles, déclarations, tâches et publication', as
     assert.equal((await call(me, { token: alice.token })).data.user.role, 'participant');
     const bob = await signup('bob', 'bob@lacitec.on.ca');
     assert.equal((await signup('alice', 'alice@lacitec.on.ca')).status, 409);
-    assert.equal((await signup('eve', 'eve@gmail.com')).status, 400);
+    assert.equal((await signup('eve', 'pas-un-courriel')).status, 400);
 
     assert.equal((await call(me)).status, 401);
     assert.equal((await call(me, { token: 'mauvais-jeton' })).status, 401);
@@ -138,6 +138,10 @@ test('Inscription, connexion, rôles, déclarations, tâches et publication', as
       token: admin.token,
       body: { participantId, day: '2026-11-09', start: '19:00', end: '21:00', title: 'Accueil' },
     });
+    // Activité hors de la liste fixe : refusée.
+    const outsideList = task(bobId);
+    outsideList.body = { ...outsideList.body, title: 'Activité inventée' };
+    assert.equal((await call(tasks.POST, outsideList)).status, 400);
     assert.equal((await call(tasks.POST, task(aliceId))).status, 409); // absente ce jour-là
     const created = await call(tasks.POST, task(bobId));
     assert.equal(created.status, 201);

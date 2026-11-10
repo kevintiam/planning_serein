@@ -2,6 +2,7 @@
 /** Dialogue natif : focus confiné, touche Échap et intitulé accessible. */
 import { useEffect, useRef } from 'react';
 import { useTaskForm } from '../hooks/useTaskForm.js';
+import { ACTIVITIES } from '../domain/activities.js';
 import Feedback from './Feedback.jsx';
 import NobodyAvailable from './NobodyAvailable.jsx';
 /**
@@ -36,15 +37,15 @@ export default function TaskDialog({ day, onClose, onSaved }) {
       <form onSubmit={submit}>
         <label>
           Activité
-          <input
-            autoFocus
-            name="title"
-            value={form.title}
-            onChange={change}
-            minLength={2}
-            maxLength={100}
-            required
-          />
+          {/* Liste fixe définie dans src/domain/activities.js. */}
+          <select autoFocus name="title" value={form.title} onChange={change} required>
+            <option value="">Choisir une activité</option>
+            {ACTIVITIES.map((activity) => (
+              <option key={activity} value={activity}>
+                {activity}
+              </option>
+            ))}
+          </select>
         </label>
         <label>
           Date

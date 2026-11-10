@@ -7,7 +7,7 @@ import { isValidEmail, isValidPassword } from '../src/lib/validation.js';
 const db = scriptPrisma();
 try {
   const email = (await input({ message: 'Courriel du compte à réinitialiser :' })).trim().toLowerCase();
-  if (!isValidEmail(email)) throw new Error('Utilisez un courriel @lacitec.on.ca.');
+  if (!isValidEmail(email)) throw new Error('Adresse courriel invalide.');
   const secret = await password({ message: 'Nouveau mot de passe :', mask: '*' });
   if (!isValidPassword(secret)) throw new Error('Utilisez de 12 à 128 caractères.');
   const repeated = await password({ message: 'Confirmez le mot de passe :', mask: '*' });
