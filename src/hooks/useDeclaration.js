@@ -1,7 +1,6 @@
 'use client';
 /** Sélection locale puis envoi explicite du mois : aucune sauvegarde cachée. */
 import { useEffect, useState } from 'react';
-import { planningApi } from '../api/planning.js';
 import { toggleWeekday } from '../domain/calendar.js';
 /**
  * Déclaration d'absences du participant pour le mois affiché.
@@ -47,7 +46,14 @@ export function useDeclaration(user, month, data, reload) {
     setError('');
     setMessage('');
     try {
-      await planningApi.saveDeclaration({ month, days, confirm });
+      // PUT /api/declarations : remplace les absences du mois.
+      const response = await fetch('/api/declarations', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ month, days, confirm }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.error || 'La requête a échoué.');
       await reload();
       setDirty(false);
       setMessage(

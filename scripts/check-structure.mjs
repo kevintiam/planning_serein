@@ -1,4 +1,4 @@
-/** Vérifie les contraintes demandées : taille, commentaires et couches client. */
+/** Vérifie les contraintes demandées : taille, commentaires et fetch hors des composants JSX. */
 import { readdir, readFile } from 'node:fs/promises';
 /** Liste récursivement tous les fichiers d’un dossier. */
 async function walk(directory) {
@@ -30,16 +30,11 @@ for (const path of files) {
     console.error(`${path} : commentaire manquant`);
     errors++;
   }
-  // Règle 3 : les composants JSX n'appellent jamais le réseau directement.
-  if (/\.(jsx)$/.test(path) && /(\bfetch\s*\(|from ['"].*\/api\/)/.test(text)) {
-    console.error(`${path} : appel API interdit dans JSX`);
-    errors++;
-  }
-  // Règle 4 : les hooks passent par src/api, jamais par fetch.
-  if (path.startsWith('src/hooks/') && /\bfetch\s*\(/.test(text)) {
-    console.error(`${path} : fetch doit être dans src/api`);
+  // Règle 3 : les composants JSX n'appellent jamais le réseau : le fetch se fait dans les hooks.
+  if (/\.(jsx)$/.test(path) && /\bfetch\s*\(/.test(text)) {
+    console.error(`${path} : fetch interdit dans JSX (à mettre dans un hook)`);
     errors++;
   }
 }
 if (errors) process.exitCode = 1;
-else console.log(`${files.length} fichiers contrôlés : <=300 lignes, commentaires, API/hooks/JSX séparés.`);
+else console.log(`${files.length} fichiers contrôlés : <=300 lignes, commentaires, fetch dans les hooks.`);

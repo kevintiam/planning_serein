@@ -1,9 +1,7 @@
 'use client';
-/** Chargement mensuel annulable, mutations et messages communs au tableau. */
+/** Chargement mensuel annulable, actions serveur (fetch) et messages communs au tableau. */
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { planningApi } from '../api/planning.js';
-import { authApi } from '../api/auth.js';
 import { currentMonth, shiftMonth } from '../domain/calendar.js';
 /** État principal de l'espace : mois affiché, données, messages et actions serveur. */
 export function usePlanning() {
@@ -17,10 +15,20 @@ export function usePlanning() {
   const [message, setMessage] = useState('');
   // Dernier code d'invitation généré (visible une seule fois).
   const [invitation, setInvitation] = useState('');
-  // Recharge les données du mois affiché.
+  // Recharge les données du mois affiché : GET /api/planning?month=AAAA-MM.
   const reload = useCallback(
     async (signal) => {
-      const result = await planningApi.overview(month, signal);
+      const response = await fetch(`/api/planning?month=${encodeURIComponent(month)}`, {
+        signal,
+        cache: 'no-store',
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        const err = new Error(result.error || 'La requête a échoué.');
+        // Le code HTTP sert à détecter une session expirée (401).
+        err.status = response.status;
+        throw err;
+      }
       setData(result);
     },
     [month],
@@ -46,15 +54,25 @@ export function usePlanning() {
     return () => controller.abort();
   }, [reload, router]);
   /**
-   * Exécute une action serveur, recharge le mois puis affiche le message de succès.
-   * Renvoie le résultat, ou null en cas d'erreur (le message d'erreur est affiché).
+   * Envoie une action au serveur (fetch), recharge le mois puis affiche le message de succès.
+   * @param url     route API, par exemple '/api/publish'
+   * @param method  'POST', 'PUT' ou 'DELETE'
+   * @param body    données envoyées en JSON
+   * @param success message affiché si tout s'est bien passé
+   * @returns la réponse du serveur, ou null en cas d'erreur (le message d'erreur est affiché).
    */
-  async function mutate(operation, success) {
+  async function mutate(url, method, body, success) {
     setBusy(true);
     setError('');
     setMessage('');
     try {
-      const result = await operation();
+      const response = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.error || 'La requête a échoué.');
       await reload();
       setMessage(success);
       return result;
@@ -65,20 +83,22 @@ export function usePlanning() {
       setBusy(false);
     }
   }
-  /** La confirmation est demandée par la fenêtre ConfirmDialog avant cet appel. */
+  /** Nouveau code d'invitation. La confirmation est demandée par ConfirmDialog avant cet appel. */
   async function invite() {
-    const result = await mutate(
-      () => planningApi.rotateInvitation(),
-      'Nouveau code créé. Copiez-le maintenant.',
-    );
+    const result = await mutate('/api/invitation', 'POST', {}, 'Nouveau code créé. Copiez-le maintenant.');
     if (result) setInvitation(result.invitation);
   }
-  /** Déconnexion puis retour à la page de connexion. */
+  /** Déconnexion (POST /api/auth/logout) puis retour à la page de connexion. */
   async function logout() {
     setBusy(true);
     setError('');
     try {
-      await authApi.logout();
+      const response = await fetch('/api/auth/logout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: '{}',
+      });
+      if (!response.ok) throw new Error('La déconnexion a échoué.');
       router.replace('/connexion');
       router.refresh();
     } catch (err) {
@@ -99,10 +119,10 @@ export function usePlanning() {
     logout,
     // Passe au mois précédent (-1) ou suivant (+1).
     moveMonth: (amount) => setMonth((value) => shiftMonth(value, amount)),
-    publish: () => mutate(() => planningApi.publish(month), 'Planning publié.'),
+    publish: () => mutate('/api/publish', 'POST', { month }, 'Planning publié.'),
     removeTask: (id) => {
       if (window.confirm('Retirer cette tâche du planning ?')) {
-        return mutate(() => planningApi.deleteTask(id), 'Tâche retirée.');
+        return mutate('/api/tasks', 'DELETE', { id }, 'Tâche retirée.');
       }
     },
   };

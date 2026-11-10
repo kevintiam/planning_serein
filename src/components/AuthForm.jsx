@@ -1,5 +1,6 @@
 'use client';
 /** Vue d'authentification : aucun appel réseau, toute la logique est dans le hook. */
+import { useState } from 'react';
 import Link from 'next/link';
 import { useAuthForm } from '../hooks/useAuthForm.js';
 import Feedback from './Feedback.jsx';
@@ -10,7 +11,20 @@ import PlanningPreview from './PlanningPreview.jsx';
  */
 export default function AuthForm({ mode }) {
   const { submit, busy, error } = useAuthForm(mode);
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [invitation, setInvitation] = useState('');
+
   const signup = mode === 'register';
+
+  /** Envoie les valeurs des états au hook : connexion = courriel + mot de passe seulement. */
+  function handleSubmit(event) {
+    const values = signup ? { name, email, password, confirmPassword, invitation } : { email, password };
+    submit(event, values);
+  }
+
   return (
     <main className="auth-page">
       <PlanningPreview />
@@ -27,22 +41,40 @@ export default function AuthForm({ mode }) {
             : 'Connectez-vous à votre espace personnel.'}
         </p>
         <Feedback error={error} />
-        {/* Les attributs name des champs deviennent les clés envoyées à l'API. */}
-        <form onSubmit={submit}>
+        {/* Chaque champ est relié à un état (value + onChange) ; handleSubmit envoie ces états. */}
+        <form onSubmit={handleSubmit}>
           {/* Champs propres à l'inscription : confirmation du mot de passe et code d'invitation. */}
           {signup && (
             <label>
               Votre nom
-              <input name="name" required minLength={2} maxLength={100} autoComplete="name" />
+              <input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                name="name"
+                required
+                minLength={2}
+                maxLength={100}
+                autoComplete="name"
+              />
             </label>
           )}
           <label>
             Courriel
-            <input name="email" type="email" required maxLength={254} autoComplete="email" />
+            <input
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              name="email"
+              type="email"
+              required
+              maxLength={254}
+              autoComplete="email"
+            />
           </label>
           <label>
             Mot de passe
             <input
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
               name="password"
               type="password"
               required
@@ -56,11 +88,26 @@ export default function AuthForm({ mode }) {
               <small>Au moins 12 caractères. Une phrase de passe est bienvenue.</small>
               <label>
                 Confirmer le mot de passe
-                <input name="confirmPassword" type="password" required autoComplete="new-password" />
+                <input
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  name="confirmPassword"
+                  type="password"
+                  required
+                  autoComplete="new-password"
+                />
               </label>
               <label>
                 Code d’invitation de l’équipe
-                <input name="invitation" required minLength={20} maxLength={128} autoComplete="off" />
+                <input
+                  value={invitation}
+                  onChange={(e) => setInvitation(e.target.value)}
+                  name="invitation"
+                  required
+                  minLength={20}
+                  maxLength={128}
+                  autoComplete="off"
+                />
               </label>
               <small>Demandez ce code à votre administrateur.</small>
             </>

@@ -1,7 +1,6 @@
 'use client';
 /** Les options sont demandées au serveur et annulées si la date change. */
 import { useState, useEffect } from 'react';
-import { planningApi } from '../api/planning.js';
 /**
  * Formulaire « Attribuer une tâche ».
  * @param initialDay date cliquée dans le calendrier
@@ -35,8 +34,14 @@ export function useTaskForm(initialDay, onSaved) {
       setLoading(false);
       return () => controller.abort();
     }
-    planningApi
-      .available({ day: form.day, start: form.start, end: form.end }, controller.signal)
+    // GET /api/available?day&start&end ; controller.signal annule la requête si l'horaire change.
+    const query = new URLSearchParams({ day: form.day, start: form.start, end: form.end });
+    fetch(`/api/available?${query}`, { signal: controller.signal, cache: 'no-store' })
+      .then(async (response) => {
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(result.error || 'La requête a échoué.');
+        return result;
+      })
       .then((result) => {
         setMembers(result.members);
         setSummary(result.summary ?? null);
@@ -55,7 +60,14 @@ export function useTaskForm(initialDay, onSaved) {
     setBusy(true);
     setError('');
     try {
-      await planningApi.createTask(form);
+      // POST /api/tasks avec les valeurs du formulaire (useState).
+      const response = await fetch('/api/tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || 'La requête a échoué.');
       await onSaved();
     } catch (err) {
       setError(err.message);

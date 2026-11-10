@@ -71,7 +71,8 @@ button:disabled,
   width: 100%;
   margin: 12px 0;
   padding: 14px 18px;
-  font-size: 15px;
+  font-size: 1rem;
+  font-family: var(--body);
 }
 
 a:focus-visible,

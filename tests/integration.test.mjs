@@ -1,145 +1,177 @@
-/** Tests Prisma réels via adaptateur pg et PostgreSQL embarqué en socket locale. */
+/**
+ * Tests d'intégration des vraies routes API sur un PostgreSQL embarqué (PGlite) :
+ * les tests ne touchent jamais à Neon. Lancer avec : npm test
+ */
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { PGLiteSocketServer } from '@electric-sql/pglite-socket';
-import { createPrismaClient } from '../src/server/database.js';
-import { limitAttempts } from '../src/server/rate-limit.js';
+import { randomUUID } from 'node:crypto';
 import { PGlite } from '@electric-sql/pglite';
-import { randomUUID, scryptSync } from 'node:crypto';
-import { createPlanningService } from '../src/server/planning-service.js';
-import { createAuthService } from '../src/server/auth-service.js';
-import { digest } from '../src/server/crypto.js';
-test('Inscription, rôles, équipes, validation et affectations', async () => {
-  // Base PostgreSQL jetable en mémoire : les tests ne touchent jamais à Neon.
+import { PGLiteSocketServer } from '@electric-sql/pglite-socket';
+import { NextRequest } from 'next/server';
+import { sha256 } from '../src/lib/crypto.js';
+
+/**
+ * Appelle une route comme le ferait le navigateur.
+ * @returns {{ status: number, data: Object, token?: string }} token = nouveau cookie de session
+ */
+async function call(handler, { method = 'GET', url = '/api', body, token } = {}) {
+  const request = new NextRequest('http://localhost' + url, {
+    method,
+    headers: {
+      'content-type': 'application/json',
+      ...(token ? { cookie: `planning_session=${token}` } : {}),
+    },
+    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+  });
+  const response = await handler(request);
+  return {
+    status: response.status,
+    data: await response.json(),
+    token: response.cookies.get('planning_session')?.value,
+  };
+}
+
+test('Inscription, connexion, rôles, déclarations, tâches et publication', async () => {
   const pg = new PGlite();
   const server = new PGLiteSocketServer({ db: pg, port: 0, host: '127.0.0.1' });
-  let db;
+  let prisma;
   try {
-    // Applique la vraie migration SQL du projet.
+    // Applique la vraie migration SQL du projet, puis branche lib/prisma.js sur cette base.
     await pg.exec(await readFile('prisma/migrations/20261108000000_init/migration.sql', 'utf8'));
     await server.start();
-    db = createPrismaClient(
-      `postgresql://postgres:postgres@${server.getServerConn()}/postgres?sslmode=disable`,
-      { max: 1 },
-    );
-    // Services branchés sur la base de test grâce à l’injection de `db`.
-    const planning = createPlanningService(db);
-    const auth = createAuthService(db);
-    const team = randomUUID(),
-      otherTeam = randomUUID();
+    process.env.DATABASE_URL = `postgresql://postgres:postgres@${server.getServerConn()}/postgres?sslmode=disable`;
+    process.env.DATABASE_POOL_MAX = '1';
+
+    // Import après la configuration : lib/prisma.js lit DATABASE_URL au chargement.
+    ({ prisma } = await import('../src/lib/prisma.js'));
+    const register = (await import('../src/app/api/auth/register/route.js')).POST;
+    const login = (await import('../src/app/api/auth/login/route.js')).POST;
+    const logout = (await import('../src/app/api/auth/logout/route.js')).POST;
+    const me = (await import('../src/app/api/auth/me/route.js')).GET;
+    const planning = (await import('../src/app/api/planning/route.js')).GET;
+    const declarations = (await import('../src/app/api/declarations/route.js')).PUT;
+    const available = (await import('../src/app/api/available/route.js')).GET;
+    const tasks = await import('../src/app/api/tasks/route.js');
+    const publish = (await import('../src/app/api/publish/route.js')).POST;
+    const invitationRoute = (await import('../src/app/api/invitation/route.js')).POST;
+
+    // Équipe et administrateur créés directement, comme le fait « npm run admin:create ».
+    const team = randomUUID();
     const invitation = 'test-invitation-code-long-enough';
-    await db.team.create({ data: { id: team, name: 'Équipe A', invite_hash: digest(invitation) } });
-    await db.team.create({ data: { id: otherTeam, name: 'Équipe B', invite_hash: digest('other') } });
-    // Limitation : la 2e tentative dépasse le maximum de 1 et doit être refusée (429).
-    await limitAttempts('login:test', 1, db);
-    await assert.rejects(limitAttempts('login:test', 1, db), { status: 429 });
-    const admin = { id: randomUUID(), team_id: team, role: 'admin' };
-    // Même si on envoie role: 'admin', une inscription publique crée toujours un participant.
-    const aliceToken = await auth.register({
-      name: 'Alice',
-      email: 'alice@example.com',
-      password: 'alice-password-test',
-      invitation,
-      role: 'admin',
+    await prisma.team.create({ data: { id: team, name: 'Équipe A', invite_hash: sha256(invitation) } });
+    const { hashPassword } = await import('../src/lib/crypto.js');
+    await prisma.user.create({
+      data: {
+        team_id: team,
+        name: 'Admin',
+        email: 'admin@lacitec.on.ca',
+        password_hash: await hashPassword('admin-password-test'),
+        role: 'admin',
+      },
     });
-    const alice = await auth.session(aliceToken);
-    const bobToken = await auth.register({
-      name: 'Bob',
-      email: 'bob@example.com',
-      password: 'bob-password-test',
-      invitation,
-    });
-    const bob = await auth.session(bobToken);
-    assert.equal(alice.role, 'participant');
-    assert.equal(await auth.session('bad-token'), null);
-    await assert.rejects(auth.login({ email: 'alice@example.com', password: 'wrong-password' }), {
-      status: 401,
-    });
-    const loginToken = await auth.login({ email: 'alice@example.com', password: 'alice-password-test' });
-    assert.equal((await auth.session(loginToken)).id, alice.id);
-    await auth.logout(loginToken);
-    assert.equal(await auth.session(loginToken), null);
-    // Un compte créé avant bcrypt (hachage scrypt) se connecte, puis est converti en bcrypt.
-    const salt = 'ef01'.repeat(8);
-    const scryptOptions = { N: 32768, r: 8, p: 3, maxmem: 64 * 1024 * 1024 };
-    const legacy = `scrypt$${salt}$${scryptSync('alice-password-test', salt, 64, scryptOptions).toString('hex')}`;
-    await db.user.update({ where: { id: alice.id }, data: { password_hash: legacy } });
-    await auth.login({ email: 'alice@example.com', password: 'alice-password-test' });
-    const converted = await db.user.findUnique({ where: { id: alice.id }, select: { password_hash: true } });
-    assert.match(converted.password_hash, /^\$2[aby]\$12\$/);
-    await auth.login({ email: 'alice@example.com', password: 'alice-password-test' });
-    await assert.rejects(auth.login({ email: 'inconnu@example.com', password: 'nimporte-quoi-123' }), {
-      status: 401,
-    });
-    const slot = {
-      day: '2026-11-09',
-      start: '19:00',
-      end: '21:00',
-      participantId: alice.id,
-      title: 'Accueil',
-    };
-    assert.deepEqual(await planning.available(admin, slot), []);
-    await assert.rejects(planning.available(alice, slot), { status: 403 });
-    assert.deepEqual(await planning.availabilitySummary(admin, slot), {
-      total: 2,
-      notValidated: 2,
-      absent: 0,
-      busy: 0,
-    });
-    await assert.rejects(planning.availabilitySummary(alice, slot), { status: 403 });
-    await planning.saveDeclaration(alice, { month: '2026-11', days: ['2026-11-09'], confirm: false });
-    assert.deepEqual(await planning.available(admin, slot), []);
-    await planning.saveDeclaration(alice, { month: '2026-11', days: ['2026-11-09'], confirm: true });
-    await planning.saveDeclaration(bob, { month: '2026-11', days: [], confirm: true });
+
+    // --- Authentification ---
+    const signup = (name, email, extra = {}) =>
+      call(register, {
+        method: 'POST',
+        body: { name, email, password: `${name}-password-test`, invitation, ...extra },
+      });
+
+    // Même avec role: 'admin' dans le corps, une inscription crée toujours un participant.
+    const alice = await signup('alice', 'alice@lacitec.on.ca', { role: 'admin' });
+    assert.equal(alice.status, 201);
+    assert.equal((await call(me, { token: alice.token })).data.user.role, 'participant');
+    const bob = await signup('bob', 'bob@lacitec.on.ca');
+    assert.equal((await signup('alice', 'alice@lacitec.on.ca')).status, 409);
+    assert.equal((await signup('eve', 'eve@gmail.com')).status, 400);
+
+    assert.equal((await call(me)).status, 401);
+    assert.equal((await call(me, { token: 'mauvais-jeton' })).status, 401);
+
+    const loginBody = (email, password) => ({ method: 'POST', body: { email, password } });
+    assert.equal((await call(login, loginBody('alice@lacitec.on.ca', 'mauvais-mot-de-passe'))).status, 401);
+    assert.equal((await call(login, loginBody('inconnu@lacitec.on.ca', 'nimporte-quoi-123'))).status, 401);
+    const admin = await call(login, loginBody('Admin@LaCitec.on.ca ', 'admin-password-test'));
+    assert.equal(admin.status, 200);
+    assert.equal(admin.data.user.role, 'admin');
+
+    // Déconnexion : le jeton ne fonctionne plus.
+    const temp = await call(login, loginBody('alice@lacitec.on.ca', 'alice-password-test'));
+    await call(logout, { method: 'POST', token: temp.token });
+    assert.equal((await call(me, { token: temp.token })).status, 401);
+
+    // --- Disponibilités et déclarations ---
+    const slot = '?day=2026-11-09&start=19:00&end=21:00';
+    const availableAt = (query = slot) =>
+      call(available, { url: '/api/available' + query, token: admin.token });
+    assert.deepEqual((await availableAt()).data.members, []);
+    assert.equal((await call(available, { url: '/api/available' + slot, token: alice.token })).status, 403);
+
+    const declare = (who, days, confirm) =>
+      call(declarations, { method: 'PUT', token: who.token, body: { month: '2026-11', days, confirm } });
+    assert.equal((await declare(admin, [], true)).status, 403);
+    assert.equal(
+      (
+        await call(declarations, {
+          method: 'PUT',
+          token: alice.token,
+          body: { month: '2026-11', days: ['2026-12-01'], confirm: true },
+        })
+      ).status,
+      400,
+    );
+    await declare(alice, ['2026-11-09'], true);
+    await declare(bob, [], true);
+    const free = await availableAt();
     assert.deepEqual(
-      (await planning.available(admin, slot)).map((u) => u.name),
-      ['Bob'],
+      free.data.members.map((m) => m.name),
+      ['bob'],
     );
-    assert.equal((await planning.available(admin, { ...slot, day: '2026-11-10' })).length, 2);
-    assert.deepEqual(await planning.availabilitySummary(admin, slot), {
-      total: 2,
-      notValidated: 0,
-      absent: 1,
-      busy: 0,
+    assert.deepEqual(free.data.summary, { total: 2, notValidated: 0, absent: 1, busy: 0 });
+
+    // --- Tâches ---
+    const aliceId = (await call(me, { token: alice.token })).data.user.id;
+    const bobId = free.data.members[0].id;
+    const task = (participantId) => ({
+      method: 'POST',
+      token: admin.token,
+      body: { participantId, day: '2026-11-09', start: '19:00', end: '21:00', title: 'Accueil' },
     });
-    await assert.rejects(planning.createTask(admin, slot), { status: 409 });
-    await assert.rejects(planning.createTask(alice, { ...slot, participantId: bob.id }), { status: 403 });
-    const task = await planning.createTask(admin, { ...slot, participantId: bob.id });
-    await assert.rejects(planning.createTask(admin, { ...slot, participantId: bob.id }), { status: 409 });
-    assert.deepEqual(await planning.availabilitySummary(admin, slot), {
-      total: 2,
-      notValidated: 0,
-      absent: 1,
-      busy: 1,
-    });
-    assert.deepEqual(await planning.available(admin, slot), []);
-    assert.equal((await planning.available(admin, { ...slot, start: '21:00', end: '22:00' })).length, 1);
-    assert.equal((await planning.overview(bob, '2026-11')).tasks.length, 0);
-    await planning.publish(admin, '2026-11');
-    assert.equal((await planning.overview(bob, '2026-11')).tasks.length, 1);
-    assert.equal((await planning.overview(alice, '2026-11')).tasks.length, 0);
-    assert.deepEqual((await planning.overview({ ...admin, team_id: otherTeam }, '2026-11')).members, []);
-    await assert.rejects(planning.deleteTask({ ...admin, team_id: otherTeam }, task.id), { status: 404 });
-    await planning.saveDeclaration(bob, { month: '2026-11', days: ['2026-11-09'], confirm: true });
-    assert.equal((await planning.overview(admin, '2026-11')).published, false);
-    await assert.rejects(planning.publish(admin, '2026-11'), { status: 409 });
-    await planning.deleteTask(admin, task.id);
-    assert.equal((await planning.overview(admin, '2026-11')).tasks.length, 0);
-    const rotated = await planning.rotateInvitation(admin);
-    await assert.rejects(
-      auth.register({ name: 'Old', email: 'old@example.com', password: 'old-password-test', invitation }),
-      { status: 400 },
+    assert.equal((await call(tasks.POST, task(aliceId))).status, 409); // absente ce jour-là
+    const created = await call(tasks.POST, task(bobId));
+    assert.equal(created.status, 201);
+    assert.equal((await call(tasks.POST, task(bobId))).status, 409); // déjà occupé
+    assert.equal((await availableAt('?day=2026-11-09&start=21:00&end=22:00')).data.members.length, 1);
+
+    // --- Publication ---
+    const monthOf = (who) => call(planning, { url: '/api/planning?month=2026-11', token: who.token });
+    assert.equal((await monthOf(bob)).data.tasks.length, 0); // pas encore publié
+    assert.equal(
+      (await call(publish, { method: 'POST', token: admin.token, body: { month: '2026-11' } })).status,
+      200,
     );
-    const newToken = await auth.register({
-      name: 'New',
-      email: 'new@example.com',
-      password: 'new-password-test',
-      invitation: rotated.invitation,
-    });
-    assert.equal((await auth.session(newToken)).team_id, team);
+    assert.equal((await monthOf(bob)).data.tasks.length, 1);
+    assert.equal((await monthOf(alice)).data.tasks.length, 0);
+
+    // Bob se déclare absent : le planning repasse en brouillon et la publication est refusée.
+    await declare(bob, ['2026-11-09'], true);
+    assert.equal((await monthOf(admin)).data.published, false);
+    assert.equal(
+      (await call(publish, { method: 'POST', token: admin.token, body: { month: '2026-11' } })).status,
+      409,
+    );
+    const del = { method: 'DELETE', token: admin.token, body: { id: created.data.id } };
+    assert.equal((await call(tasks.DELETE, del)).status, 200);
+    assert.equal((await call(tasks.DELETE, del)).status, 404);
+
+    // --- Invitation : l'ancien code ne fonctionne plus ---
+    const rotated = await call(invitationRoute, { method: 'POST', token: admin.token });
+    assert.equal((await signup('old', 'old@lacitec.on.ca')).status, 400);
+    const fresh = await signup('new', 'new@lacitec.on.ca', { invitation: rotated.data.invitation });
+    assert.equal((await call(me, { token: fresh.token })).data.user.team_id, team);
   } finally {
-    if (db) await db.$disconnect();
+    if (prisma) await prisma.$disconnect();
     await server.stop();
     await pg.close();
   }

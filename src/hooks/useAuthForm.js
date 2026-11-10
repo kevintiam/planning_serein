@@ -1,28 +1,38 @@
 'use client';
-/** Le formulaire transmet ses valeurs au hook ; lui seul appelle authApi. */
+/** Le formulaire transmet ses valeurs (useState) au hook ; le hook les envoie au backend avec fetch. */
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { authApi } from '../api/auth.js';
 /**
  * Gère l'envoi du formulaire de connexion ou d'inscription.
- * @param mode 'login' ou 'register' (nom de la méthode d'authApi appelée)
+ * @param mode 'login' (→ POST /api/auth/login) ou 'register' (→ POST /api/auth/register)
  */
 export function useAuthForm(mode) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  async function submit(event) {
+  /**
+   * @param event  événement submit du formulaire (pour bloquer le rechargement de la page)
+   * @param values valeurs des useState du formulaire, par exemple { email, password }
+   */
+  async function submit(event, values) {
     event.preventDefault();
     setBusy(true);
     setError('');
-    // Récupère tous les champs du formulaire par leur attribut name.
-    const values = Object.fromEntries(new FormData(event.currentTarget));
     try {
-      if (mode === 'register' && values.password !== values.confirmPassword) {
+      // La confirmation sert seulement à vérifier la saisie : elle n'est pas envoyée au backend.
+      const { confirmPassword, ...body } = values;
+      if (mode === 'register' && body.password !== confirmPassword) {
         throw new Error('Les deux mots de passe doivent être identiques.');
       }
-      await authApi[mode](values);
-      // /espace redirige ensuite vers /admin ou /participant selon le rôle.
+      // Envoi au backend : le serveur répond { error } en cas de problème.
+      const response = await fetch(`/api/auth/${mode}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || 'La requête a échoué.');
+      // Succès : le cookie de session est posé. /espace redirige ensuite vers /admin ou /participant selon le rôle.
       router.replace('/espace');
       router.refresh();
     } catch (err) {
