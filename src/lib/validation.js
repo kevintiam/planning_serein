@@ -8,8 +8,7 @@
 export const isValidEmail = (email) =>
   typeof email === 'string' &&
   email.length <= 254 &&
-  /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) &&
-  email.endsWith('@lacitec.on.ca');
+  /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
 
 /** Mot de passe de 12 à 128 caractères. */
 export const isValidPassword = (password) =>
